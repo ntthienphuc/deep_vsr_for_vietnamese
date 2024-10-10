@@ -1,0 +1,21 @@
+# docker-compose.yml
+
+version: '3.8'
+
+services:
+  lipreading_pipeline:
+    build: .
+    image: lipreading_pipeline_gpu
+    container_name: lipreading_pipeline_container
+    volumes:
+      - ./data_3:/app/data_3
+      - ./models:/app/models
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+    environment:
+      - CONFIG_OPTION1=value1
+      - CONFIG_OPTION2=value2
+    restart: unless-stopped
