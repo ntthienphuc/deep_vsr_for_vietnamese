@@ -2,7 +2,7 @@
 
 import os
 import random
-from config import args
+from lipreading.config import args
 
 class SplitFilesCreator:
     def __init__(self):

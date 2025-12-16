@@ -3,7 +3,7 @@
 import os
 from shutil import copyfile
 from moviepy.video.io.VideoFileClip import VideoFileClip
-from config import args
+from lipreading.config import args
 
 class LabelVideoSplitter:
     def __init__(self):

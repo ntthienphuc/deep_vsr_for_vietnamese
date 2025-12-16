@@ -12,11 +12,11 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 
-from config import args
-from models.video_net import VideoNet
-from data.lrs2_dataset import LRS2Main
-from data.utils import collate_fn
-from utils.general import num_params, train, evaluate
+from lipreading.config import args
+from lipreading.models.video_net import VideoNet
+from lipreading.datasets.lrs2_dataset import LRS2Main
+from lipreading.datasets.utils import collate_fn
+from lipreading.utils.general import num_params, train, evaluate
 
 class ModelTrainer:
     """

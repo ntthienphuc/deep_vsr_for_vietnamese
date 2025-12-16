@@ -1,20 +1,18 @@
 # config.py
 
-import os
+from pathlib import Path
 
 args = dict()
 
-# Base directory (assumes pipeline.py is run from the project root)
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
 # Project structure
-args["CODE_DIRECTORY"] = "."  # Current directory (project root)
-args["DATA_DIRECTORY"] = os.path.join(args["CODE_DIRECTORY"], "data_3")  # Relative path to the data directory
-args["DEMO_DIRECTORY"] = os.path.join(args["CODE_DIRECTORY"], "final")  # Relative path to the demo directory
-args["PRETRAINED_MODEL_FILE"] = os.path.join(args["CODE_DIRECTORY"], "models", "video-only.pt")  # Relative path
-args["TRAINED_MODEL_FILE"] = os.path.join(args["CODE_DIRECTORY"], "models", "trained_model.pt")  # Relative path
-args["TRAINED_LM_FILE"] = os.path.join(args["CODE_DIRECTORY"], "models", "language_model.pt")  # Relative path
-args["TRAINED_FRONTEND_FILE"] = os.path.join(args["CODE_DIRECTORY"], "models", "visual_frontend.pt")  # Relative path
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+args["CODE_DIRECTORY"] = str(PROJECT_ROOT)  # Project root
+args["DATA_DIRECTORY"] = str(PROJECT_ROOT / "data_3")
+args["DEMO_DIRECTORY"] = str(PROJECT_ROOT / "final")
+args["PRETRAINED_MODEL_FILE"] = str(PROJECT_ROOT / "models" / "video-only.pt")
+args["TRAINED_MODEL_FILE"] = str(PROJECT_ROOT / "models" / "trained_model.pt")
+args["TRAINED_LM_FILE"] = str(PROJECT_ROOT / "models" / "language_model.pt")
+args["TRAINED_FRONTEND_FILE"] = str(PROJECT_ROOT / "models" / "visual_frontend.pt")
 
 # Data
 args["PRETRAIN_VAL_SPLIT"] = 0.01  # Validation set size fraction during pretraining

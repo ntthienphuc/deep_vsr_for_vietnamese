@@ -5,9 +5,9 @@ import shutil
 import numpy as np
 import torch
 from tqdm import tqdm
-from config import args
-from models.visual_frontend import VisualFrontend
-from utils.preprocessing import preprocess_sample
+from lipreading.config import args
+from lipreading.models.visual_frontend import VisualFrontend
+from lipreading.utils.preprocessing import preprocess_sample
 
 class DataPreprocessor:
     def __init__(self):

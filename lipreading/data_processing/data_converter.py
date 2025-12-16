@@ -2,7 +2,7 @@
 
 import os
 import pandas as pd
-from config import args
+from lipreading.config import args
 
 class CSVToTXTConverter:
     def __init__(self):
