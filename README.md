@@ -1,149 +1,67 @@
+# Video-Only Lip Reading with Curriculum Learning
 
-# Lip Reading Pipeline with Curriculum Learning
+End-to-end pipeline that turns word-level annotated MP4 clips into training-ready visual features and trains a transformer-based lip-reading model with curriculum learning. Everything runs through `pipeline.py`, and the repo includes Docker support for reproducibility.
 
-## Overview
+## How the Pipeline Runs
+- Input: MP4 videos and matching word-level CSV labels (`Word, Start, End` in seconds) sharing the same basename under `data_3/processed_csv_final/`.
+- Convert CSV labels to TXT transcripts in `data_3/processed_mp4/` while keeping the MP4s alongside the TXT files.
+- Split long utterances (longer than `MAIN_REQ_INPUT_LENGTH` characters) into two halves, time-shift the second half to start at 0.0s, and save the paired MP4/TXT files to `data_3/split_output/`.
+- Build `pretrain.txt`, `train.txt`, `val.txt`, and `test.txt` index lists, then move everything to `data_3/main/split_output/`.
+- Extract ROI sequences and visual features with the pretrained visual frontend; save `.png` ROI mosaics and `.npy` feature tensors next to each sample. Generate `preval.txt` for pretrain/validation splitting.
+- Train the VideoNet transformer with a curriculum word-count schedule `[1, 2, 3, 5, 7, 9, 13, 17, 21, 29, 37]`, auto-halving the batch size on OOM, and stopping early when validation WER plateaus and the learning rate reaches `FINAL_LR`. Checkpoints and plots are written under `checkpoints/`.
+- Clean up `processed_csv_final/` and `processed_mp4/` when the run finishes.
 
-This project implements a lip reading pipeline using a video-only model enhanced with Curriculum Learning. The training progresses through multiple iterations with increasing word counts to steadily improve the model's performance. The entire pipeline is containerized using Docker to ensure consistency and ease of deployment across different environments. GPU support is included to accelerate the training process.
+## Requirements
+- NVIDIA GPU with drivers matching CUDA 11.3 runtime.
+- Docker + NVIDIA Container Toolkit **or** Python 3.8+ with FFmpeg available on PATH.
+- Python deps: `pip install -r requirements.txt` (PyTorch, OpenCV, moviepy, matplotlib, etc.).
 
-## Table of Contents
+## Data and Model Preparation
+- Default data root is `data_3/` (change `args["DATA_DIRECTORY"]` in `config.py` if needed).
+- Place raw files in `data_3/processed_csv_final/`:
+  - `sample.mp4`
+  - `sample.csv` (columns: `Word, Start, End`; times in seconds; basename matches the MP4)
+- The converter writes TXT labels to `data_3/processed_mp4/`. Ensure the MP4 files are also present there (copy them if they are only in `processed_csv_final/`) so later steps can find matching video/label pairs.
+- Pretrained weights expected in `models/`:
+  - `video-only.pt` (initial video model if you want to fine-tune)
+  - `visual_frontend.pt` (required for feature extraction)
+  - `language_model.pt` (optional for beam-search decoding)
+  - `trained_model.pt` (your latest trained weights if resuming)
 
-- [Features](#features)
-- [Prerequisites](#prerequisites)
-- [Project Structure](#project-structure)
-- [Setup Instructions](#setup-instructions)
-  - [1. Install Docker and NVIDIA Container Toolkit](#1-install-docker-and-nvidia-container-toolkit)
-  - [2. Prepare Data and Models](#2-prepare-data-and-models)
-  - [3. Build the Docker Image](#3-build-the-docker-image)
-  - [4. Run the Pipeline Using Docker Compose](#4-run-the-pipeline-using-docker-compose)
-- [Configuration](#configuration)
-- [Running Docker Without Docker Compose](#running-docker-without-docker-compose)
-- [Troubleshooting](#troubleshooting)
-- [Contributing](#contributing)
-- [License](#license)
-
-## Features
-
-- **Curriculum Learning:** Automates training over predefined word counts to enhance learning progressively.
-- **Dynamic Batch Size Adjustment:** Reduces batch size by half upon encountering Out Of Memory (OOM) errors during training.
-- **Early Stopping:** Terminates training when validation Word Error Rate (WER) flattens and the learning rate reaches its minimum value.
-- **GPU Acceleration:** Utilizes NVIDIA GPUs to significantly speed up the training process.
-- **Dockerized Environment:** Ensures consistent and reproducible setups across different systems.
-- **Comprehensive Logging:** Provides detailed logs and checkpoints for monitoring and debugging.
-
-## Prerequisites
-
-Before setting up and running the pipeline, ensure you have the following installed on your system:
-
-- **Docker:** [Install Docker](https://docs.docker.com/get-docker/)
-- **NVIDIA Drivers:** Latest drivers installed on your host machine.
-- **NVIDIA Container Toolkit:** [Install NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html)
-- **Git:** (Optional) For cloning the repository.
-
-## Setup Instructions
-
-Follow these steps to set up and run the lip reading pipeline using Docker and Docker Compose with GPU support.
-
-### 1. Install Docker and NVIDIA Container Toolkit
-
-#### **Install Docker**
-
-- **Windows & macOS:** Download and install [Docker Desktop](https://www.docker.com/products/docker-desktop).
-- **Linux:** Follow the official [Docker Engine installation guide](https://docs.docker.com/engine/install/).
-
-#### **Install NVIDIA Container Toolkit**
-
-To enable GPU support within Docker containers, install the NVIDIA Container Toolkit.
-
-1. **Prerequisites:**
-   - NVIDIA GPU with the latest drivers installed.
-   - Docker Engine installed.
-
-2. **Installation Steps:**
-
-   Follow the [official NVIDIA Container Toolkit installation guide](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html) for your operating system.
-
-3. **Verify Installation:**
-
-   Run the following command to verify that Docker can access the GPU:
-
-   ```bash
-   docker run --gpus all nvidia/cuda:11.0-base nvidia-smi
-   ```
-
-   You should see the GPU details if the setup is correct.
-
-### 2. Prepare Data and Models
-
-**Data Preparation:**
-
-- Place your CSV annotation files in the appropriate directory.
-- Place your MP4 video files in the appropriate directory.
-- Ensure that each video has a corresponding CSV file with the same base name.
-
-**Model Files:**
-
-- If you have pre-trained models, place them in the models/ directory.
-- Ensure that all necessary model files (.pt files) are correctly named and located.
-
-### 3. Build the Docker Image
-
-From the root directory of your project, build the Docker image using the provided Dockerfile.
-
+## Running with Docker Compose
 ```bash
-docker build -t lipreading_pipeline_gpu .
+docker compose up --build
+```
+- Mounts `data_3/` and `models/` into the container and runs `python3 pipeline.py`.
+- Use `docker compose run --rm --build --gpus all lipreading_pipeline python3 pipeline.py` if you prefer an ad-hoc run.
+- If `checkpoints/` exists, the trainer will ask whether to delete it before starting.
+
+## Running Locally (without Docker)
+```bash
+python -m venv .venv
+.\.venv\Scripts\activate  # Windows
+# source .venv/bin/activate  # Linux/macOS
+pip install -r requirements.txt
+python pipeline.py
 ```
 
-**Explanation:**
+## Key Configuration (`config.py`)
+- Paths: `DATA_DIRECTORY`, `DEMO_DIRECTORY`, `PRETRAINED_MODEL_FILE`, `TRAINED_MODEL_FILE`, `TRAINED_LM_FILE`, `TRAINED_FRONTEND_FILE`.
+- Data: `MAIN_REQ_INPUT_LENGTH`, `PRETRAIN_VAL_SPLIT`, `NUM_WORKERS`, character set in `CHAR_TO_INDEX`.
+- Training: `BATCH_SIZE`, `NUM_STEPS`, `SAVE_FREQUENCY`, `INIT_LR`→`FINAL_LR` scheduler, `EARLY_STOPPING_PATIENCE`, `EARLY_STOPPING_MIN_DELTA`.
+- Model: transformer dims `TX_NUM_FEATURES`, `TX_ATTENTION_HEADS`, `TX_NUM_LAYERS`, `TX_FEEDFORWARD_DIM`, `TX_DROPOUT`, positional encoding `PE_MAX_LENGTH`, `NUM_CLASSES`.
+- Decoding: `USE_LM`, `BEAM_WIDTH`, `LM_WEIGHT_ALPHA`, `LENGTH_PENALTY_BETA`, `THRESH_PROBABILITY`.
+- Curriculum counts live in `ModelTrainer.train_model()`; edit the list there to change the schedule.
 
-- `-t lipreading_pipeline_gpu`: Tags the image with the name lipreading_pipeline_gpu.
-- `.`: Specifies the current directory as the build context.
-
-### 4. Run the Pipeline Using Docker Compose
-
-The provided docker-compose.yml simplifies running the Docker container with the necessary configurations.
-
-**Steps:**
-
-- Ensure Docker Compose is installed.
-- Configure docker-compose.yml (if necessary).
-
-To start the Docker container, run:
-
-```bash
-docker-compose up
-```
-
-Or, to run in detached mode:
-
-```bash
-docker-compose up -d
-```
-
-### Configuration
-
-All configurations are managed through the config.py file. Adjust the parameters as needed, such as curriculum word counts, batch size, and learning rate.
-
-### Running Docker Without Docker Compose
-
-If you prefer not to use Docker Compose, you can run the Docker container directly with the necessary configurations.
-
-```bash
-docker run --gpus all -it --rm     -v $(pwd)/data:/app/data     -v $(pwd)/models:/app/models     lipreading_pipeline_gpu
-```
+## Outputs and Artifacts
+- Split lists: `data_3/pretrain.txt`, `train.txt`, `val.txt`, `test.txt`, `preval.txt`.
+- Preprocessed samples: `data_3/main/split_output/<name>.mp4/.txt/.png/.npy`.
+- Checkpoints: `checkpoints/models/wordcount_<k>_step_<n>_wer_<x>.pt` saved every `SAVE_FREQUENCY` steps (and at the end of each curriculum stage).
+- Plots: `checkpoints/plots/wordcount_<k>_step_<n>_loss.png` and `_wer.png`.
+- Archived artifacts in `final/` stay untouched by the pipeline.
 
 ## Troubleshooting
-
-- **Docker Build Fails:** Ensure dependencies are correctly listed and system requirements are met.
-- **GPU Not Detected:** Check NVIDIA driver and Container Toolkit installation.
-- **Out of Memory (OOM) Errors:** Reduce batch size or free up GPU resources.
-- **Permission Denied Errors:** Check file permissions and avoid running the container as root.
-
-## Contributing
-
-Contributions are welcome! If you'd like to enhance the pipeline or fix bugs, please follow these steps:
-
-1. Fork the repository.
-2. Create a feature branch.
-3. Commit your changes.
-4. Push to the branch.
-5. Create a pull request.
+- GPU not visible in Docker: check `nvidia-smi` inside the container or run with `--gpus all`.
+- Mismatched MP4/TXT counts: make sure every MP4 in `processed_mp4/` has a TXT file with the same basename; the pipeline zips sorted lists.
+- OOM during training: the trainer halves the batch size automatically; you can also lower `BATCH_SIZE` or shorten the curriculum list.
+- Checkpoint prompt: if you want to keep previous runs, answer `n` when asked about deleting `checkpoints/`.

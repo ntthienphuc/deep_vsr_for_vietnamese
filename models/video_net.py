@@ -1,10 +1,3 @@
-"""
-Author: Smeet Shah
-Copyright (c) 2020 Smeet Shah
-File part of 'deep_avsr' GitHub repository available at -
-https://github.com/smeetrs/deep_avsr
-"""
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F

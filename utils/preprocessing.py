@@ -1,10 +1,3 @@
-"""
-Author: Smeet Shah
-Copyright (c) 2020 Smeet Shah
-File part of 'deep_avsr' GitHub repository available at -
-https://github.com/smeetrs/deep_avsr
-"""
-
 import cv2 as cv
 import numpy as np
 import torch

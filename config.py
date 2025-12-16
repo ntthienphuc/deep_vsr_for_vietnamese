@@ -1,12 +1,5 @@
 # config.py
 
-"""
-Author: Smeet Shah
-Copyright (c) 2020 Smeet Shah
-File part of 'deep_avsr' GitHub repository available at -
-https://github.com/smeetrs/deep_avsr
-"""
-
 import os
 
 args = dict()

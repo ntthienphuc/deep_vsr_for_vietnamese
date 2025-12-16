@@ -1,10 +1,3 @@
-"""
-Author: Smeet Shah
-Copyright (c) 2020 Smeet Shah
-File part of 'deep_avsr' GitHub repository available at -
-https://github.com/smeetrs/deep_avsr
-"""
-
 import torch
 from torch.nn.utils.rnn import pad_sequence
 import numpy as np
