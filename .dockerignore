@@ -13,6 +13,6 @@ Dockerfile
 *.md
 *.log
 checkpoints/
-data_3/processed_csv_final/
-data_3/processed_mp4/
+data/processed_csv_final/
+data/processed_mp4/
 models/*.pt

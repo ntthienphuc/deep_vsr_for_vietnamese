@@ -8,7 +8,7 @@ services:
     image: lipreading_pipeline_gpu
     container_name: lipreading_pipeline_container
     volumes:
-      - ./data_3:/app/data_3
+      - ./data:/app/data
       - ./models:/app/models
     deploy:
       resources:

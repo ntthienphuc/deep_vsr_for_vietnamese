@@ -1,5 +1,6 @@
 # config.py
 
+import os
 from pathlib import Path
 
 args = dict()
@@ -7,7 +8,11 @@ args = dict()
 # Project structure
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 args["CODE_DIRECTORY"] = str(PROJECT_ROOT)  # Project root
-args["DATA_DIRECTORY"] = str(PROJECT_ROOT / "data_3")
+
+# Allow overriding the data directory via environment variable while defaulting to ./data
+data_root_env = os.getenv("DATA_DIRECTORY")
+data_root = Path(data_root_env) if data_root_env else PROJECT_ROOT / "data"
+args["DATA_DIRECTORY"] = str(data_root)
 args["DEMO_DIRECTORY"] = str(PROJECT_ROOT / "final")
 args["PRETRAINED_MODEL_FILE"] = str(PROJECT_ROOT / "models" / "video-only.pt")
 args["TRAINED_MODEL_FILE"] = str(PROJECT_ROOT / "models" / "trained_model.pt")
